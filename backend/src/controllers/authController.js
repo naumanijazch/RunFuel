@@ -24,6 +24,15 @@ function signToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' })
 }
 
+function setAuthCookie(res, token) {
+  res.cookie('runfuel_token', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  })
+}
+
 function validationError(res, error) {
   return res.status(400).json({
     message: 'Invalid request',
@@ -56,8 +65,11 @@ async function register(req, res, next) {
       select: { id: true, email: true, createdAt: true }
     })
 
+    const token = signToken(user.id)
+    setAuthCookie(res, token)
+
     return res.status(201).json({
-      token: signToken(user.id),
+      token,
       user: publicUser(user)
     })
   } catch (error) {
@@ -86,8 +98,11 @@ async function login(req, res, next) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
 
+    const token = signToken(user.id)
+    setAuthCookie(res, token)
+
     return res.json({
-      token: signToken(user.id),
+      token,
       user: publicUser(user)
     })
   } catch (error) {
@@ -96,10 +111,17 @@ async function login(req, res, next) {
 }
 
 function me(req, res) {
+  setAuthCookie(res, signToken(req.user.id))
   return res.json({ user: req.user })
 }
 
 function logout(req, res) {
+  res.clearCookie('runfuel_token', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  })
+
   return res.json({ message: 'Logged out' })
 }
 

@@ -62,6 +62,14 @@ function AppShell() {
             }
           />
           <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/planner"
             element={
               <ProtectedRoute>

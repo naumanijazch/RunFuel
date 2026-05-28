@@ -1,10 +1,12 @@
 const express = require('express')
 const cors = require('cors')
+const cookieParser = require('cookie-parser')
 require('dotenv').config()
 const authRoutes = require('./routes/authRoutes')
 const gymScheduleRoutes = require('./routes/gymScheduleRoutes')
 const nutritionTargetRoutes = require('./routes/nutritionTargetRoutes')
 const settingsRoutes = require('./routes/settingsRoutes')
+const stravaRoutes = require('./routes/stravaRoutes')
 const weightRoutes = require('./routes/weightRoutes')
 
 const app = express()
@@ -13,11 +15,12 @@ app.set('etag', false) // prevent caching
 
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true
   })
 )
 
+app.use(cookieParser())
 app.use(express.json())
 
 app.use('/api', (req, res, next) => {
@@ -34,6 +37,7 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/gym-schedule', gymScheduleRoutes)
 app.use('/api/nutrition-target', nutritionTargetRoutes)
 app.use('/api/weight', weightRoutes)
+app.use('/api/strava', stravaRoutes)
 
 app.use((err, req, res, next) => {
   console.error(err)

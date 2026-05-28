@@ -8,6 +8,10 @@ function getToken(req) {
     return header.slice(7)
   }
 
+  if (req.cookies?.runfuel_token) {
+    return req.cookies.runfuel_token
+  }
+
   return null
 }
 
