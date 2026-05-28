@@ -18,27 +18,40 @@ const WORKOUT_TO_API = Object.fromEntries(
 
 const scheduleItemSchema = z.object({
   dayOfWeek: z.coerce.number().int().min(1).max(7),
-  workoutType: z.enum(['push', 'pull', 'legs', 'upper', 'full_body', 'easy_run', 'quality_run', 'rest'])
+  workoutType: z.enum([
+    'push',
+    'pull',
+    'legs',
+    'upper',
+    'full_body',
+    'easy_run',
+    'quality_run',
+    'rest'
+  ])
 })
 
-const scheduleSchema = z.array(scheduleItemSchema).length(7).superRefine((items, ctx) => {
-  const days = new Set(items.map((item) => item.dayOfWeek))
+const scheduleSchema = z
+  .array(scheduleItemSchema)
+  .length(7)
+  .superRefine((items, ctx) => {
+    const days = new Set(items.map((item) => item.dayOfWeek))
 
-  if (days.size !== 7) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'Schedule must include one item for each day of week, 1 through 7'
-    })
-  }
-})
+    if (days.size !== 7) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Schedule must include one item for each day of week, 1 through 7'
+      })
+    }
+  })
 
 const defaultSchedule = [
-  { dayOfWeek: 1, workoutType: 'push' },
-  { dayOfWeek: 2, workoutType: 'easy_run' },
-  { dayOfWeek: 3, workoutType: 'pull' },
-  { dayOfWeek: 4, workoutType: 'quality_run' },
-  { dayOfWeek: 5, workoutType: 'legs' },
-  { dayOfWeek: 6, workoutType: 'full_body' },
+  { dayOfWeek: 1, workoutType: 'rest' },
+  { dayOfWeek: 2, workoutType: 'rest' },
+  { dayOfWeek: 3, workoutType: 'rest' },
+  { dayOfWeek: 4, workoutType: 'rest' },
+  { dayOfWeek: 5, workoutType: 'rest' },
+  { dayOfWeek: 6, workoutType: 'rest' },
   { dayOfWeek: 7, workoutType: 'rest' }
 ]
 
@@ -99,7 +112,9 @@ async function updateGymSchedule(req, res, next) {
       return validationError(res, result.error)
     }
 
-    const sortedSchedule = [...result.data].sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+    const sortedSchedule = [...result.data].sort(
+      (a, b) => a.dayOfWeek - b.dayOfWeek
+    )
 
     await prisma.$transaction([
       prisma.gymSchedule.deleteMany({ where: { userId: req.user.id } }),
