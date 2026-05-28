@@ -44,11 +44,7 @@ function AppShell() {
               Logout
             </button>
           </>
-        ) : (
-          <Link className="ml-auto text-link hover:text-inverse" to="/login">
-            Login
-          </Link>
-        )}
+        ):(<></>)}
       </nav>
 
       <main className="mx-auto w-full max-w-6xl p-6">

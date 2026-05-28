@@ -48,15 +48,19 @@ export default function Login() {
     <div className="mx-auto flex min-h-[calc(100vh-120px)] w-full max-w-md items-center">
       <section className="w-full rounded-lg border-4 border-border-app bg-panel p-6 text-left shadow-panel">
         <div className="mb-6">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="h-6 w-6 rounded-full border-2 border-border-strong bg-lens shadow-[0_0_20px_var(--color-lens)]" />
-            <span className="h-3 w-3 rounded-full bg-danger" />
-            <span className="h-3 w-3 rounded-full bg-action" />
+          <div className="mb-4 flex items-center gap-3">
+            <img
+              alt="RunFuel"
+              className="h-16 w-16 rounded-md border-2 border-border-strong bg-input object-contain p-1 shadow-control"
+              src="/RunFuel.png"
+            />
+            <div>
+              <h1 className="text-page-title font-bold text-heading">RunFuel</h1>
+              <p className="mt-1 text-sm text-muted">
+                Sign in to plan runs around gym fatigue.
+              </p>
+            </div>
           </div>
-          <h1 className="text-page-title font-bold text-heading">RunFuel</h1>
-          <p className="mt-2 text-sm text-muted">
-            Sign in to plan runs around gym fatigue.
-          </p>
         </div>
 
         <div className="mb-5 grid grid-cols-2 rounded-md border border-border-strong bg-control p-1">
