@@ -2,12 +2,6 @@ const jwt = require('jsonwebtoken')
 const prisma = require('../lib/prisma')
 
 function getToken(req) {
-  const header = req.headers.authorization
-
-  if (header && header.startsWith('Bearer ')) {
-    return header.slice(7)
-  }
-
   if (req.cookies?.runfuel_token) {
     return req.cookies.runfuel_token
   }

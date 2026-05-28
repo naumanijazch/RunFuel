@@ -68,10 +68,7 @@ async function register(req, res, next) {
     const token = signToken(user.id)
     setAuthCookie(res, token)
 
-    return res.status(201).json({
-      token,
-      user: publicUser(user)
-    })
+    return res.status(201).json({ user: publicUser(user) })
   } catch (error) {
     next(error)
   }
@@ -101,10 +98,7 @@ async function login(req, res, next) {
     const token = signToken(user.id)
     setAuthCookie(res, token)
 
-    return res.json({
-      token,
-      user: publicUser(user)
-    })
+    return res.json({ user: publicUser(user) })
   } catch (error) {
     next(error)
   }
