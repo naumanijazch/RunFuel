@@ -35,7 +35,7 @@ function AppShell() {
             <Link className="text-link hover:text-inverse" to="/settings">
               Settings
             </Link>
-            <span className="ml-auto hidden text-lens sm:inline">{user?.email}</span>
+            <span className="ml-auto hidden text-inverse sm:inline">{user?.email}</span>
             <button
               className="rounded border border-border-panel px-3 py-1.5 font-semibold text-inverse hover:border-lens"
               onClick={handleLogout}

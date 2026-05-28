@@ -66,3 +66,8 @@ export async function syncStravaRuns() {
   const response = await api.post('/strava/sync')
   return response.data
 }
+
+export async function fetchTrainingLoadAnalysis() {
+  const response = await api.get('/training-load/analysis')
+  return response.data.analysis
+}

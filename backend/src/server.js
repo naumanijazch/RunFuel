@@ -7,6 +7,7 @@ const gymScheduleRoutes = require('./routes/gymScheduleRoutes')
 const nutritionTargetRoutes = require('./routes/nutritionTargetRoutes')
 const settingsRoutes = require('./routes/settingsRoutes')
 const stravaRoutes = require('./routes/stravaRoutes')
+const trainingLoadRoutes = require('./routes/trainingLoadRoutes')
 const weightRoutes = require('./routes/weightRoutes')
 
 const app = express()
@@ -38,6 +39,7 @@ app.use('/api/gym-schedule', gymScheduleRoutes)
 app.use('/api/nutrition-target', nutritionTargetRoutes)
 app.use('/api/weight', weightRoutes)
 app.use('/api/strava', stravaRoutes)
+app.use('/api/training-load', trainingLoadRoutes)
 
 app.use((err, req, res, next) => {
   console.error(err)

@@ -7,6 +7,7 @@ import {
   fetchStravaRuns,
   fetchStravaStatus,
   fetchStravaSummary,
+  fetchTrainingLoadAnalysis,
   syncStravaRuns
 } from '../api/client'
 
@@ -58,6 +59,15 @@ function formatDate(date) {
     day: 'numeric',
     year: 'numeric'
   }).format(new Date(date))
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined) {
+    return '--'
+  }
+
+  const prefix = Number(value) > 0 ? '+' : ''
+  return `${prefix}${Number(value).toFixed(0)}%`
 }
 
 function apiMessage(error) {
@@ -219,6 +229,201 @@ function WeightNutritionSummary({ weight, nutrition }) {
   )
 }
 
+function severityClass(severity) {
+  if (severity === 'high') {
+    return 'border-danger bg-danger text-danger-text'
+  }
+
+  if (severity === 'medium' || severity === 'moderate') {
+    return 'border-border-strong bg-action text-action-text'
+  }
+
+  return 'border-lens bg-lens-soft text-heading'
+}
+
+function titleCase(value) {
+  if (!value) {
+    return '--'
+  }
+
+  return String(value)
+    .split('_')
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function recommendationClass(type) {
+  if (type === 'modify_session') {
+    return 'border-danger bg-danger text-danger-text'
+  }
+
+  if (type === 'train_but_control_extras' || type === 'prioritize_recovery') {
+    return 'border-border-strong bg-action text-action-text'
+  }
+
+  return 'border-lens bg-lens-soft text-heading'
+}
+
+function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, summary }) {
+  if (!analysis) {
+    return null
+  }
+
+  const todayDecision = analysis.todayDecision
+  const runPlanStatus = analysis.runPlanStatus
+  const weeklyLoadContext = analysis.weeklyLoadContext
+  const relevantTodayWarnings = analysis.relevantTodayWarnings || []
+  const fullWeekWarnings = analysis.fullWeekWarnings || analysis.conflicts || []
+  const coachNotes = (analysis.coachNotes || []).slice(0, 4)
+
+  if (!todayDecision || !runPlanStatus || !weeklyLoadContext) {
+    return null
+  }
+
+  const upcomingLabel = runPlanStatus.upcomingPlannedRuns?.length
+    ? runPlanStatus.upcomingPlannedRuns.map((run) => run.dayLabel).join(', ')
+    : 'None'
+
+  return (
+    <section className="space-y-4">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <MetricCard label="Weekly running distance" value={formatDistance(summary.weeklyDistanceKm)} />
+        <MetricCard label="Runs this week" value={`${summary.totalRunsThisWeek || 0} runs`} />
+        <MetricCard label="Average pace" value={formatPace(summary.averagePaceSecPerKm)} />
+        <MetricCard label="Current weight" value={latestWeight ? `${Number(latestWeight.weightKg).toFixed(1)} kg` : '--'} />
+        <MetricCard label="Daily calorie target" value={nutritionTarget ? `${nutritionTarget.calories} kcal/day` : '--'} />
+      </section>
+      
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-heading">Today&apos;s Training Decision</h2>
+          <p className="mt-1 text-sm font-semibold text-muted">Daily guidance from your schedule, Strava runs, and current load.</p>
+        </div>
+        <span className={`rounded border-2 px-3 py-2 text-sm font-bold ${recommendationClass(todayDecision.recommendationType)}`}>
+          {titleCase(todayDecision.recommendationType)}
+        </span>
+      </div>
+
+      <Panel className="bg-panel">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-normal text-muted">
+              Today: {todayDecision.dayLabel} - {titleCase(todayDecision.scheduledWorkoutType)}
+            </p>
+            <h3 className="mt-2 text-2xl font-bold leading-tight text-heading">{todayDecision.headline}</h3>
+          </div>
+          <span className={`rounded border-2 px-3 py-2 text-sm font-bold ${recommendationClass(todayDecision.recommendationType)}`}>
+            Readiness: {todayDecision.readinessLabel}
+          </span>
+        </div>
+        <p className="mt-4 text-sm font-semibold text-muted">{todayDecision.recommendation}</p>
+        <p className="mt-2 text-sm font-bold text-heading">{todayDecision.suggestedAction}</p>
+        {todayDecision.reasons?.length ? (
+          <ul className="ml-5 mt-4 list-disc space-y-2 text-sm font-semibold text-muted">
+            {todayDecision.reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        ) : null}
+      </Panel>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel>
+          <h3 className="text-base font-bold text-heading">Run Plan Status</h3>
+          <p className="mt-2 text-sm font-semibold text-muted">{runPlanStatus.message}</p>
+          <p className="mt-4 text-2xl font-bold text-heading">
+            {runPlanStatus.completedRunsSoFar} completed / {runPlanStatus.plannedRunsDueSoFar} due so far /{' '}
+            {runPlanStatus.upcomingPlannedRuns?.length || 0} upcoming
+          </p>
+          <p className="mt-2 text-xs font-bold uppercase tracking-normal text-muted">
+            {runPlanStatus.plannedRunsThisWeek} planned this week / Upcoming: {upcomingLabel}
+          </p>
+        </Panel>
+
+        <Panel>
+          <h3 className="text-base font-bold text-heading">Weekly Running Load</h3>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">This week</p>
+              <p className="mt-1 text-xl font-bold text-heading">{formatDistance(weeklyLoadContext.currentWeekKm)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">Last week</p>
+              <p className="mt-1 text-xl font-bold text-heading">{formatDistance(weeklyLoadContext.previousWeekKm)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">Change</p>
+              <p className="mt-1 text-xl font-bold text-heading">{formatPercent(weeklyLoadContext.mileageChangePercent)}</p>
+            </div>
+          </div>
+          <p className="mt-4 text-sm font-semibold text-muted">{weeklyLoadContext.message}</p>
+        </Panel>
+      </div>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-base font-bold text-heading">Relevant Today</h3>
+          <span className="text-xs font-bold uppercase tracking-normal text-muted">{relevantTodayWarnings.length} notes</span>
+        </div>
+        {relevantTodayWarnings.length ? (
+          <div className="grid gap-3 lg:grid-cols-3">
+            {relevantTodayWarnings.map((warning) => (
+              <div className="rounded-lg border-2 border-border-panel bg-input p-3" key={`${warning.code}-${warning.message}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`rounded border px-2 py-1 text-xs font-bold ${severityClass(warning.severity)}`}>
+                    {warning.severity}
+                  </span>
+                  <p className="font-bold text-heading">{warning.title}</p>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-muted">{warning.message}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-lg border-2 border-border-panel bg-input p-3 text-sm font-semibold text-muted">
+            No major training conflicts affect today.
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h3 className="text-base font-bold text-heading">Coach Notes</h3>
+        <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+          {coachNotes.map((note) => (
+            <li className="rounded-lg border-2 border-border-panel bg-input p-3 text-sm font-semibold text-muted" key={note}>
+              {note}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="text-base font-bold text-heading">Full Week Analysis</h3>
+        <div className="mt-3 space-y-3">
+          {fullWeekWarnings.length ? (
+            fullWeekWarnings.map((warning) => (
+              <div className="rounded-lg border-2 border-border-panel bg-input p-3" key={`${warning.code}-${warning.message}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`rounded border px-2 py-1 text-xs font-bold ${severityClass(warning.severity)}`}>
+                    {warning.severity}
+                  </span>
+                  <p className="font-bold text-heading">{warning.title}</p>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-muted">{warning.message}</p>
+                {warning.suggestion ? <p className="mt-1 text-sm font-semibold text-heading">{warning.suggestion}</p> : null}
+              </div>
+            ))
+          ) : (
+            <p className="rounded-lg border-2 border-border-panel bg-input p-3 text-sm font-semibold text-muted">
+              No additional full-week planning notes.
+            </p>
+          )}
+        </div>
+      </section>
+    </section>
+  )
+}
+
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [status, setStatus] = useState({ connected: false })
@@ -226,6 +431,7 @@ export default function Dashboard() {
   const [runs, setRuns] = useState([])
   const [latestWeight, setLatestWeight] = useState(null)
   const [nutritionTarget, setNutritionTarget] = useState(null)
+  const [trainingLoadAnalysis, setTrainingLoadAnalysis] = useState(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState(null)
@@ -241,17 +447,19 @@ export default function Dashboard() {
   const hasRuns = recentRuns.length > 0
 
   const loadDashboard = useCallback(async () => {
-    const [loadedStatus, loadedSummary, loadedWeight, loadedNutrition] = await Promise.all([
+    const [loadedStatus, loadedSummary, loadedWeight, loadedNutrition, loadedTrainingLoad] = await Promise.all([
       fetchStravaStatus(),
       fetchStravaSummary(),
       fetchLatestWeight(),
-      fetchCurrentNutritionTarget()
+      fetchCurrentNutritionTarget(),
+      fetchTrainingLoadAnalysis()
     ])
 
     setStatus(loadedStatus)
     setSummary(loadedSummary || emptySummary)
     setLatestWeight(loadedWeight)
     setNutritionTarget(loadedNutrition)
+    setTrainingLoadAnalysis(loadedTrainingLoad)
 
     if (loadedStatus.connected) {
       const loadedRuns = await fetchStravaRuns()
@@ -368,17 +576,16 @@ export default function Dashboard() {
         <EmptyStravaCard connected={status.connected} onConnect={connectStrava} onSync={handleSync} syncing={syncing} />
       ) : null}
 
+      <TrainingLoadSection
+        analysis={trainingLoadAnalysis}
+        latestWeight={latestWeight}
+        nutritionTarget={nutritionTarget}
+        summary={summary}
+      />
+
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.55fr)]">
         <LatestRunCard run={summary.latestRun} />
         <WeightNutritionSummary weight={latestWeight} nutrition={nutritionTarget} />
-      </section>
-
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <MetricCard label="Weekly running distance" value={formatDistance(summary.weeklyDistanceKm)} />
-        <MetricCard label="Runs this week" value={`${summary.totalRunsThisWeek || 0} runs`} />
-        <MetricCard label="Average pace" value={formatPace(summary.averagePaceSecPerKm)} />
-        <MetricCard label="Current weight" value={latestWeight ? `${Number(latestWeight.weightKg).toFixed(1)} kg` : '--'} />
-        <MetricCard label="Daily calorie target" value={nutritionTarget ? `${nutritionTarget.calories} kcal/day` : '--'} />
       </section>
 
       <section>
