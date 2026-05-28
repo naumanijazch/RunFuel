@@ -27,19 +27,20 @@ enum PaceUnit {
 }
 
 enum GoalType {
-  BUILD_BASE
-  CUT
-  MAINTAIN
-  RACE_PREP
+  FIVE_K
+  TEN_K
+  GENERAL_ENDURANCE
+  HYBRID_CONDITIONING
 }
 
 enum WorkoutType {
   UPPER
-  LOWER
   FULL_BODY
   PUSH
   PULL
   LEGS
+  EASY_RUN
+  QUALITY_RUN
   REST
 }
 
@@ -64,7 +65,7 @@ model UserSettings {
   distanceUnit     DistanceUnit @default(KM)
   paceUnit         PaceUnit     @default(MIN_PER_KM)
   easyPaceSecPerKm Int?
-  goalType         GoalType     @default(BUILD_BASE)
+  goalType         GoalType     @default(GENERAL_ENDURANCE)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -103,7 +104,7 @@ model GymSchedule {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, dayOfWeek, workoutType])
+  @@unique([userId, dayOfWeek])
 }
 
 model NutritionTarget {
@@ -111,8 +112,8 @@ model NutritionTarget {
   userId        String
   calories      Int
   proteinG      Int
-  carbsG        Int
-  fatG          Int
+  carbsG        Int?
+  fatG          Int?
   weekStartDate DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
