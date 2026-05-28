@@ -1,31 +1,98 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Planner from "./pages/Planner";
-import Settings from "./pages/Settings";
+import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import ProtectedRoute from './components/ProtectedRoute'
+import { AuthProvider } from './context/AuthProvider'
+import { useAuth } from './context/useAuth'
+import Dashboard from './pages/Dashboard'
+import Login from './pages/Login'
+import Planner from './pages/Planner'
+import Settings from './pages/Settings'
+
+function AppShell() {
+  const { isAuthenticated, logout, user } = useAuth()
+  const navigate = useNavigate()
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login')
+  }
+
+  return (
+    <div className="min-h-screen bg-app text-text-app">
+      <nav className="flex flex-wrap items-center gap-4 border-b-4 border-border-app bg-shell px-4 py-3 text-sm text-inverse shadow-control">
+        <Link className="flex items-center gap-2 font-bold text-inverse" to="/">
+          <span className="h-4 w-4 rounded-full border-2 border-inverse bg-lens shadow-[0_0_18px_var(--color-lens)]" />
+          <span>RunFuel</span>
+        </Link>
+
+        {isAuthenticated ? (
+          <>
+            <Link className="text-link hover:text-inverse" to="/">
+              Dashboard
+            </Link>
+            <Link className="text-link hover:text-inverse" to="/planner">
+              Planner
+            </Link>
+            <Link className="text-link hover:text-inverse" to="/settings">
+              Settings
+            </Link>
+            <span className="ml-auto hidden text-lens sm:inline">{user?.email}</span>
+            <button
+              className="rounded border border-border-panel px-3 py-1.5 font-semibold text-inverse hover:border-lens"
+              onClick={handleLogout}
+              type="button"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <Link className="ml-auto text-link hover:text-inverse" to="/login">
+            Login
+          </Link>
+        )}
+      </nav>
+
+      <main className="mx-auto w-full max-w-6xl p-6">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/planner"
+            element={
+              <ProtectedRoute>
+                <Planner />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  )
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-neutral-950 text-white">
-        <nav className="border-b border-neutral-800 p-4 flex gap-4">
-          <Link to="/">Dashboard</Link>
-          <Link to="/planner">Planner</Link>
-          <Link to="/settings">Settings</Link>
-          <Link to="/login">Login</Link>
-        </nav>
-
-        <main className="p-6">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/planner" element={<Planner />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/login" element={<Login />} />
-          </Routes>
-        </main>
-      </div>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </BrowserRouter>
-  );
+  )
 }
 
-export default App;
+export default App

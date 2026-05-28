@@ -4,10 +4,142 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum WeightUnit {
+  KG
+  LBS
+}
+
+enum DistanceUnit {
+  KM
+  MILES
+}
+
+enum PaceUnit {
+  MIN_PER_KM
+  MIN_PER_MILE
+}
+
+enum GoalType {
+  BUILD_BASE
+  CUT
+  MAINTAIN
+  RACE_PREP
+}
+
+enum WorkoutType {
+  UPPER
+  LOWER
+  FULL_BODY
+  PUSH
+  PULL
+  LEGS
+  REST
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  settings         UserSettings?
+  stravaConnection StravaConnection?
+  runs             Run[]
+  gymSchedule      GymSchedule[]
+  nutritionTargets NutritionTarget[]
+  weightEntries    WeightEntry[]
+  generatedPlans   GeneratedPlan[]
+}
+
+model UserSettings {
+  userId           String       @id
+  weightUnit       WeightUnit   @default(KG)
+  distanceUnit     DistanceUnit @default(KM)
+  paceUnit         PaceUnit     @default(MIN_PER_KM)
+  easyPaceSecPerKm Int?
+  goalType         GoalType     @default(BUILD_BASE)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StravaConnection {
+  userId          String   @id
+  stravaAthleteId String   @unique
+  accessToken     String
+  refreshToken    String
+  expiresAt       DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Run {
+  id                 String   @id @default(cuid())
+  userId             String
+  stravaActivityId   String   @unique
+  name               String
+  activityDate       DateTime
+  distanceKm         Float
+  movingTimeSeconds  Int
+  paceSecPerKm       Int
+  averageHeartRate   Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, activityDate])
+}
+
+model GymSchedule {
+  id          String           @id @default(cuid())
+  userId      String
+  dayOfWeek   Int
+  workoutType WorkoutType
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek, workoutType])
+}
+
+model NutritionTarget {
+  id            String   @id @default(cuid())
+  userId        String
+  calories      Int
+  proteinG      Int
+  carbsG        Int
+  fatG          Int
+  weekStartDate DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStartDate])
+}
+
+model WeightEntry {
+  id       String   @id @default(cuid())
+  userId   String
+  date     DateTime
+  weightKg Float
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model GeneratedPlan {
+  id            String   @id @default(cuid())
+  userId        String
+  weekStartDate DateTime
+  goalType      GoalType
+  planJson      Json
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStartDate])
 }
