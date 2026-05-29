@@ -4,6 +4,7 @@ import {
   API_BASE_URL,
   fetchCurrentNutritionTarget,
   fetchLatestWeight,
+  fetchSettings,
   fetchStravaRuns,
   fetchStravaStatus,
   fetchStravaSummary,
@@ -19,18 +20,49 @@ const emptySummary = {
   recentRuns: []
 }
 
-function formatDistance(km) {
-  return `${Number(km || 0).toFixed(1)} km`
+const defaultSettings = {
+  weightUnit: 'kg',
+  distanceUnit: 'km',
+  paceUnit: 'min_per_km'
 }
 
-function formatPace(secondsPerKm) {
-  if (!secondsPerKm) {
-    return '-- /km'
+const KM_TO_MILES = 0.6213711922
+const KG_TO_LBS = 2.2046226218
+
+function formatDistance(km, settings = defaultSettings) {
+  const value = Number(km || 0)
+
+  if (settings.distanceUnit === 'miles') {
+    return `${(value * KM_TO_MILES).toFixed(1)} mi`
   }
 
-  const minutes = Math.floor(secondsPerKm / 60)
-  const seconds = Math.round(secondsPerKm % 60)
-  return `${minutes}:${String(seconds).padStart(2, '0')} /km`
+  return `${value.toFixed(1)} km`
+}
+
+function formatPace(secondsPerKm, settings = defaultSettings) {
+  if (!secondsPerKm) {
+    return settings.paceUnit === 'min_per_mile' ? '-- /mi' : '-- /km'
+  }
+
+  const displaySeconds = Math.round(settings.paceUnit === 'min_per_mile' ? secondsPerKm * 1.609344 : secondsPerKm)
+  const minutes = Math.floor(displaySeconds / 60)
+  const seconds = displaySeconds % 60
+  const label = settings.paceUnit === 'min_per_mile' ? '/mi' : '/km'
+  return `${minutes}:${String(seconds).padStart(2, '0')} ${label}`
+}
+
+function formatWeight(weightKg, settings = defaultSettings) {
+  if (!weightKg) {
+    return '--'
+  }
+
+  const value = Number(weightKg)
+
+  if (settings.weightUnit === 'lbs') {
+    return `${(value * KG_TO_LBS).toFixed(1)} lbs`
+  }
+
+  return `${value.toFixed(1)} kg`
 }
 
 function formatDuration(seconds) {
@@ -129,7 +161,7 @@ function EmptyStravaCard({ connected, onConnect, onSync, syncing }) {
   )
 }
 
-function LatestRunCard({ run }) {
+function LatestRunCard({ run, settings }) {
   return (
     <Panel className="bg-panel">
       <div className="flex items-start justify-between gap-4">
@@ -143,7 +175,7 @@ function LatestRunCard({ run }) {
       {run ? (
         <div className="mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
-            <p className="text-2xl font-bold text-heading">{formatDistance(run.distanceKm)}</p>
+            <p className="text-2xl font-bold text-heading">{formatDistance(run.distanceKm, settings)}</p>
             <p className="font-semibold text-muted">Distance</p>
           </div>
           <div>
@@ -151,7 +183,7 @@ function LatestRunCard({ run }) {
             <p className="font-semibold text-muted">Duration</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-heading">{formatPace(run.paceSecPerKm)}</p>
+            <p className="text-2xl font-bold text-heading">{formatPace(run.paceSecPerKm, settings)}</p>
             <p className="font-semibold text-muted">Pace</p>
           </div>
           <div>
@@ -166,7 +198,7 @@ function LatestRunCard({ run }) {
   )
 }
 
-function RecentRunsTable({ runs }) {
+function RecentRunsTable({ runs, settings }) {
   if (!runs.length) {
     return (
       <div className="rounded-lg border-2 border-dashed border-border-panel bg-panel-strong p-5 text-sm font-semibold text-muted">
@@ -192,9 +224,9 @@ function RecentRunsTable({ runs }) {
             <tr className="border-b border-border-panel last:border-b-0" key={run.id || run.activityDate}>
               <td className="px-4 py-3 text-muted">{formatDate(run.activityDate)}</td>
               <td className="px-4 py-3 font-bold text-heading">{run.name}</td>
-              <td className="px-4 py-3">{formatDistance(run.distanceKm)}</td>
+              <td className="px-4 py-3">{formatDistance(run.distanceKm, settings)}</td>
               <td className="px-4 py-3">{formatDuration(run.movingTimeSeconds)}</td>
-              <td className="px-4 py-3">{formatPace(run.paceSecPerKm)}</td>
+              <td className="px-4 py-3">{formatPace(run.paceSecPerKm, settings)}</td>
             </tr>
           ))}
         </tbody>
@@ -203,7 +235,7 @@ function RecentRunsTable({ runs }) {
   )
 }
 
-function WeightNutritionSummary({ weight, nutrition }) {
+function WeightNutritionSummary({ weight, nutrition, settings }) {
   const hasPersonalData = Boolean(weight || nutrition)
 
   return (
@@ -213,7 +245,7 @@ function WeightNutritionSummary({ weight, nutrition }) {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <p className="text-xs font-bold uppercase tracking-normal text-muted">Weight</p>
-            <p className="mt-1 text-2xl font-bold text-heading">{weight ? `${Number(weight.weightKg).toFixed(1)} kg` : '--'}</p>
+            <p className="mt-1 text-2xl font-bold text-heading">{formatWeight(weight?.weightKg, settings)}</p>
             <p className="mt-1 text-xs font-semibold text-muted">{weight ? `Updated ${formatDate(weight.date)}` : 'No weight entry yet'}</p>
           </div>
           <div>
@@ -264,7 +296,7 @@ function recommendationClass(type) {
   return 'border-lens bg-lens-soft text-heading'
 }
 
-function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, summary }) {
+function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, settings, summary }) {
   if (!analysis) {
     return null
   }
@@ -287,10 +319,10 @@ function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, summary 
   return (
     <section className="space-y-4">
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <MetricCard label="Weekly running distance" value={formatDistance(summary.weeklyDistanceKm)} />
+        <MetricCard label="Weekly running distance" value={formatDistance(summary.weeklyDistanceKm, settings)} />
         <MetricCard label="Runs this week" value={`${summary.totalRunsThisWeek || 0} runs`} />
-        <MetricCard label="Average pace" value={formatPace(summary.averagePaceSecPerKm)} />
-        <MetricCard label="Current weight" value={latestWeight ? `${Number(latestWeight.weightKg).toFixed(1)} kg` : '--'} />
+        <MetricCard label="Average pace" value={formatPace(summary.averagePaceSecPerKm, settings)} />
+        <MetricCard label="Current weight" value={formatWeight(latestWeight?.weightKg, settings)} />
         <MetricCard label="Daily calorie target" value={nutritionTarget ? `${nutritionTarget.calories} kcal/day` : '--'} />
       </section>
       
@@ -345,11 +377,11 @@ function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, summary 
           <div className="mt-4 grid grid-cols-3 gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-normal text-muted">This week</p>
-              <p className="mt-1 text-xl font-bold text-heading">{formatDistance(weeklyLoadContext.currentWeekKm)}</p>
+              <p className="mt-1 text-xl font-bold text-heading">{formatDistance(weeklyLoadContext.currentWeekKm, settings)}</p>
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-normal text-muted">Last week</p>
-              <p className="mt-1 text-xl font-bold text-heading">{formatDistance(weeklyLoadContext.previousWeekKm)}</p>
+              <p className="mt-1 text-xl font-bold text-heading">{formatDistance(weeklyLoadContext.previousWeekKm, settings)}</p>
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-normal text-muted">Change</p>
@@ -429,6 +461,7 @@ export default function Dashboard() {
   const [status, setStatus] = useState({ connected: false })
   const [summary, setSummary] = useState(emptySummary)
   const [runs, setRuns] = useState([])
+  const [settings, setSettings] = useState(defaultSettings)
   const [latestWeight, setLatestWeight] = useState(null)
   const [nutritionTarget, setNutritionTarget] = useState(null)
   const [trainingLoadAnalysis, setTrainingLoadAnalysis] = useState(null)
@@ -447,12 +480,13 @@ export default function Dashboard() {
   const hasRuns = recentRuns.length > 0
 
   const loadDashboard = useCallback(async () => {
-    const [loadedStatus, loadedSummary, loadedWeight, loadedNutrition, loadedTrainingLoad] = await Promise.all([
+    const [loadedStatus, loadedSummary, loadedWeight, loadedNutrition, loadedTrainingLoad, loadedSettings] = await Promise.all([
       fetchStravaStatus(),
       fetchStravaSummary(),
       fetchLatestWeight(),
       fetchCurrentNutritionTarget(),
-      fetchTrainingLoadAnalysis()
+      fetchTrainingLoadAnalysis(),
+      fetchSettings()
     ])
 
     setStatus(loadedStatus)
@@ -460,6 +494,7 @@ export default function Dashboard() {
     setLatestWeight(loadedWeight)
     setNutritionTarget(loadedNutrition)
     setTrainingLoadAnalysis(loadedTrainingLoad)
+    setSettings({ ...defaultSettings, ...(loadedSettings || {}) })
 
     if (loadedStatus.connected) {
       const loadedRuns = await fetchStravaRuns()
@@ -580,12 +615,13 @@ export default function Dashboard() {
         analysis={trainingLoadAnalysis}
         latestWeight={latestWeight}
         nutritionTarget={nutritionTarget}
+        settings={settings}
         summary={summary}
       />
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.55fr)]">
-        <LatestRunCard run={summary.latestRun} />
-        <WeightNutritionSummary weight={latestWeight} nutrition={nutritionTarget} />
+        <LatestRunCard run={summary.latestRun} settings={settings} />
+        <WeightNutritionSummary weight={latestWeight} nutrition={nutritionTarget} settings={settings} />
       </section>
 
       <section>
@@ -593,7 +629,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-bold text-heading">Recent runs</h2>
           <span className="text-xs font-bold uppercase tracking-normal text-muted">Newest first</span>
         </div>
-        <RecentRunsTable runs={recentRuns} />
+        <RecentRunsTable runs={recentRuns} settings={settings} />
       </section>
     </div>
   )
