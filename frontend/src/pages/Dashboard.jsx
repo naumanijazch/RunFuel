@@ -12,6 +12,23 @@ import {
   fetchTrainingLoadAnalysis,
   syncStravaRuns
 } from '../api/client'
+import { apiMessage } from '../api/errors'
+import CoachNotes from '../components/CoachNotes'
+import { WarningCard } from '../components/FatigueWarnings'
+import MetricCard from '../components/MetricCard'
+import Panel from '../components/Panel'
+import StatusMessage from '../components/StatusMessage'
+import {
+  formatDate,
+  formatDistance,
+  formatDuration,
+  formatPace,
+  formatPaceRange,
+  formatPercent,
+  formatWeight,
+  titleCase
+} from '../utils/formatters'
+import { recommendationClass } from '../utils/trainingBadges'
 
 const emptySummary = {
   weeklyDistanceKm: 0,
@@ -25,112 +42,6 @@ const defaultSettings = {
   weightUnit: 'kg',
   distanceUnit: 'km',
   paceUnit: 'min_per_km'
-}
-
-const KM_TO_MILES = 0.6213711922
-const KG_TO_LBS = 2.2046226218
-
-function formatDistance(km, settings = defaultSettings) {
-  const value = Number(km || 0)
-
-  if (settings.distanceUnit === 'miles') {
-    return `${(value * KM_TO_MILES).toFixed(1)} mi`
-  }
-
-  return `${value.toFixed(1)} km`
-}
-
-function formatPace(secondsPerKm, settings = defaultSettings) {
-  if (!secondsPerKm) {
-    return settings.paceUnit === 'min_per_mile' ? '-- /mi' : '-- /km'
-  }
-
-  const displaySeconds = Math.round(settings.paceUnit === 'min_per_mile' ? secondsPerKm * 1.609344 : secondsPerKm)
-  const minutes = Math.floor(displaySeconds / 60)
-  const seconds = displaySeconds % 60
-  const label = settings.paceUnit === 'min_per_mile' ? '/mi' : '/km'
-  return `${minutes}:${String(seconds).padStart(2, '0')} ${label}`
-}
-
-function formatPaceRange(range, settings = defaultSettings) {
-  if (!range) {
-    return null
-  }
-
-  return `${formatPace(range.from, settings)}-${formatPace(range.to, settings)}`
-}
-
-function formatWeight(weightKg, settings = defaultSettings) {
-  if (!weightKg) {
-    return '--'
-  }
-
-  const value = Number(weightKg)
-
-  if (settings.weightUnit === 'lbs') {
-    return `${(value * KG_TO_LBS).toFixed(1)} lbs`
-  }
-
-  return `${value.toFixed(1)} kg`
-}
-
-function formatDuration(seconds) {
-  if (!seconds) {
-    return '0m 00s'
-  }
-
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.round(seconds % 60)
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`
-  }
-
-  return `${minutes}m ${String(secs).padStart(2, '0')}s`
-}
-
-function formatDate(date) {
-  if (!date) {
-    return '--'
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }).format(new Date(date))
-}
-
-function formatPercent(value) {
-  if (value === null || value === undefined) {
-    return '--'
-  }
-
-  const prefix = Number(value) > 0 ? '+' : ''
-  return `${prefix}${Number(value).toFixed(0)}%`
-}
-
-function apiMessage(error) {
-  return error?.response?.data?.message || 'Something went wrong.'
-}
-
-function MetricCard({ label, value, note }) {
-  return (
-    <div className="rounded-lg border-2 border-border-panel bg-input p-4 shadow-control">
-      <p className="text-xs font-bold uppercase tracking-normal text-muted">{label}</p>
-      <p className="mt-2 text-2xl font-bold leading-tight text-heading">{value}</p>
-      {note ? <p className="mt-1 text-xs font-semibold text-muted">{note}</p> : null}
-    </div>
-  )
-}
-
-function Panel({ children, className = '' }) {
-  return (
-    <section className={`rounded-lg border-2 border-border-panel bg-panel-strong p-5 shadow-control ${className}`}>
-      {children}
-    </section>
-  )
 }
 
 function EmptyStravaCard({ connected, onConnect, onSync, syncing }) {
@@ -326,41 +237,6 @@ function PlannerSummaryCard({ plan, settings }) {
   )
 }
 
-function severityClass(severity) {
-  if (severity === 'high') {
-    return 'border-danger bg-danger text-danger-text'
-  }
-
-  if (severity === 'medium' || severity === 'moderate') {
-    return 'border-border-strong bg-action text-action-text'
-  }
-
-  return 'border-lens bg-lens-soft text-heading'
-}
-
-function titleCase(value) {
-  if (!value) {
-    return '--'
-  }
-
-  return String(value)
-    .split('_')
-    .map((word) => word[0].toUpperCase() + word.slice(1))
-    .join(' ')
-}
-
-function recommendationClass(type) {
-  if (type === 'modify_session') {
-    return 'border-danger bg-danger text-danger-text'
-  }
-
-  if (type === 'train_but_control_extras' || type === 'prioritize_recovery') {
-    return 'border-border-strong bg-action text-action-text'
-  }
-
-  return 'border-lens bg-lens-soft text-heading'
-}
-
 function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, settings, summary }) {
   if (!analysis) {
     return null
@@ -501,15 +377,7 @@ function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, settings
         {relevantTodayWarnings.length ? (
           <div className="grid gap-3 lg:grid-cols-3">
             {relevantTodayWarnings.map((warning) => (
-              <div className="rounded-lg border-2 border-border-panel bg-input p-3" key={`${warning.code}-${warning.message}`}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded border px-2 py-1 text-xs font-bold ${severityClass(warning.severity)}`}>
-                    {warning.severity}
-                  </span>
-                  <p className="font-bold text-heading">{warning.title}</p>
-                </div>
-                <p className="mt-2 text-sm font-semibold text-muted">{warning.message}</p>
-              </div>
+              <WarningCard key={`${warning.code}-${warning.message}`} warning={warning} />
             ))}
           </div>
         ) : (
@@ -519,32 +387,14 @@ function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, settings
         )}
       </section>
 
-      <section>
-        <h3 className="text-base font-bold text-heading">Coach Notes</h3>
-        <ul className="mt-3 grid gap-3 lg:grid-cols-2">
-          {coachNotes.map((note) => (
-            <li className="rounded-lg border-2 border-border-panel bg-input p-3 text-sm font-semibold text-muted" key={note}>
-              {note}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <CoachNotes notes={coachNotes} />
 
       <section>
         <h3 className="text-base font-bold text-heading">Full Week Analysis</h3>
         <div className="mt-3 space-y-3">
           {fullWeekWarnings.length ? (
             fullWeekWarnings.map((warning) => (
-              <div className="rounded-lg border-2 border-border-panel bg-input p-3" key={`${warning.code}-${warning.message}`}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded border px-2 py-1 text-xs font-bold ${severityClass(warning.severity)}`}>
-                    {warning.severity}
-                  </span>
-                  <p className="font-bold text-heading">{warning.title}</p>
-                </div>
-                <p className="mt-2 text-sm font-semibold text-muted">{warning.message}</p>
-                {warning.suggestion ? <p className="mt-1 text-sm font-semibold text-heading">{warning.suggestion}</p> : null}
-              </div>
+              <WarningCard key={`${warning.code}-${warning.message}`} showSuggestion warning={warning} />
             ))
           ) : (
             <p className="rounded-lg border-2 border-border-panel bg-input p-3 text-sm font-semibold text-muted">
@@ -704,11 +554,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {message ? (
-          <p className={`mt-4 text-sm font-semibold ${message.type === 'error' ? 'text-danger' : 'text-muted'}`}>
-            {message.text}
-          </p>
-        ) : null}
+        <StatusMessage message={message} />
       </section>
 
       {!status.connected || !hasRuns ? (

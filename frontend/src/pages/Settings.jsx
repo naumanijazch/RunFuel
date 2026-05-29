@@ -9,6 +9,18 @@ import {
   saveSettings,
   saveWeightEntry
 } from '../api/client'
+import { apiMessage } from '../api/errors'
+import FormField, { inputClass, selectClass } from '../components/FormField'
+import FormSection from '../components/FormSection'
+import {
+  convertPaceDisplay,
+  convertWeightDisplay,
+  displayToKg,
+  formatDateInput,
+  kgToDisplay,
+  paceToSeconds,
+  secondsToPace
+} from '../utils/formatters'
 
 const days = [
   { dayOfWeek: 1, label: 'Monday' },
@@ -50,13 +62,6 @@ const defaultSchedule = days.map((day) => ({
   workoutType: day.dayOfWeek === 7 ? 'rest' : 'run'
 }))
 
-function formatDateInput(date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 const today = formatDateInput(new Date())
 
 function currentWeekStart() {
@@ -64,115 +69,6 @@ function currentWeekStart() {
   const day = date.getDay() || 7
   date.setDate(date.getDate() - day + 1)
   return formatDateInput(date)
-}
-
-function secondsToPace(seconds) {
-  if (!seconds) {
-    return ''
-  }
-
-  const minutes = Math.floor(seconds / 60)
-  const secs = Math.round(seconds % 60)
-  return `${minutes}:${String(secs).padStart(2, '0')}`
-}
-
-function paceToSeconds(value) {
-  const trimmed = String(value).trim()
-
-  if (!trimmed) {
-    return null
-  }
-
-  if (trimmed.includes(':')) {
-    const [minutes, seconds = '0'] = trimmed.split(':')
-    return Number(minutes) * 60 + Number(seconds)
-  }
-
-  return Math.round(Number(trimmed) * 60)
-}
-
-function kgToDisplay(weightKg, unit) {
-  if (!weightKg) {
-    return ''
-  }
-
-  return unit === 'lbs' ? (weightKg * 2.2046226218).toFixed(1) : Number(weightKg).toFixed(1)
-}
-
-function displayToKg(weight, unit) {
-  const value = Number(weight)
-  return unit === 'lbs' ? value / 2.2046226218 : value
-}
-
-function convertPaceDisplay(value, fromUnit, toUnit) {
-  const seconds = paceToSeconds(value)
-
-  if (!seconds || fromUnit === toUnit) {
-    return value
-  }
-
-  const secPerKm = fromUnit === 'min_per_mile' ? seconds / 1.609344 : seconds
-  const displaySeconds = toUnit === 'min_per_mile' ? secPerKm * 1.609344 : secPerKm
-  return secondsToPace(displaySeconds)
-}
-
-function convertWeightDisplay(value, fromUnit, toUnit) {
-  if (!value || fromUnit === toUnit) {
-    return value
-  }
-
-  const kg = displayToKg(value, fromUnit)
-  return kgToDisplay(kg, toUnit)
-}
-
-function apiMessage(error) {
-  const message = error?.response?.data?.message
-  const errors = error?.response?.data?.errors
-
-  if (errors) {
-    const firstError = Object.values(errors).flat().find(Boolean)
-    return firstError || message || 'Please check the form values.'
-  }
-
-  return message || 'Something went wrong.'
-}
-
-function Field({ children, label, required = false }) {
-  return (
-    <label className="flex flex-col gap-1 text-sm font-semibold text-heading">
-      <span className="flex items-center gap-1">
-        {label}
-        {required ? <span className="text-danger" aria-label="required">*</span> : null}
-      </span>
-      {children}
-    </label>
-  )
-}
-
-function Section({ children, message, onSubmit, saving, title }) {
-  return (
-    <form
-      className="rounded-lg border-2 border-border-panel bg-panel-strong p-4 shadow-control"
-      onSubmit={onSubmit}
-    >
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-bold text-heading">{title}</h2>
-        <button
-          className="ml-auto rounded border-2 border-border-strong bg-action px-4 py-2 text-sm font-bold text-action-text hover:bg-action-hover disabled:opacity-60"
-          disabled={saving}
-          type="submit"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
-      </div>
-      {children}
-      {message ? (
-        <p className={`mt-3 text-sm font-semibold ${message.type === 'error' ? 'text-danger' : 'text-muted'}`}>
-          {message.text}
-        </p>
-      ) : null}
-    </form>
-  )
 }
 
 export default function Settings() {
@@ -192,11 +88,6 @@ export default function Settings() {
 
   const paceLabel = settings.paceUnit === 'min_per_mile' ? 'Easy pace (min/mile)' : 'Easy pace (min/km)'
   const weightLabel = `Current weight (${settings.weightUnit})`
-
-  const inputClass =
-    'rounded border-2 border-border-panel bg-input px-3 py-2 text-sm text-text-app outline-none focus:border-focus'
-
-  const selectClass = `${inputClass} cursor-pointer`
 
   const paceMultiplier = useMemo(
     () => (settings.paceUnit === 'min_per_mile' ? 1.609344 : 1),
@@ -372,14 +263,14 @@ export default function Settings() {
         {messages.page ? <p className="mt-3 text-sm font-semibold text-danger">{messages.page.text}</p> : null}
       </div>
 
-      <Section
+      <FormSection
         message={messages.settings}
         onSubmit={handleSettingsSave}
         saving={saving === 'settings'}
         title="Athlete Preferences"
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Field label="Weight unit">
+          <FormField label="Weight unit">
             <select
               className={selectClass}
               value={settings.weightUnit}
@@ -388,8 +279,8 @@ export default function Settings() {
               <option value="kg">kg</option>
               <option value="lbs">lbs</option>
             </select>
-          </Field>
-          <Field label="Distance unit">
+          </FormField>
+          <FormField label="Distance unit">
             <select
               className={selectClass}
               value={settings.distanceUnit}
@@ -398,8 +289,8 @@ export default function Settings() {
               <option value="km">km</option>
               <option value="miles">miles</option>
             </select>
-          </Field>
-          <Field label="Pace unit">
+          </FormField>
+          <FormField label="Pace unit">
             <select
               className={selectClass}
               value={settings.paceUnit}
@@ -408,8 +299,8 @@ export default function Settings() {
               <option value="min_per_km">min/km</option>
               <option value="min_per_mile">min/mile</option>
             </select>
-          </Field>
-          <Field label={paceLabel}>
+          </FormField>
+          <FormField label={paceLabel}>
             <input
               className={inputClass}
               inputMode="decimal"
@@ -417,8 +308,8 @@ export default function Settings() {
               value={settings.easyPaceSecPerKm ?? ''}
               onChange={(event) => setSettings({ ...settings, easyPaceSecPerKm: event.target.value })}
             />
-          </Field>
-          <Field label="Goal type">
+          </FormField>
+          <FormField label="Goal type">
             <select
               className={selectClass}
               value={settings.goalType}
@@ -430,11 +321,11 @@ export default function Settings() {
                 </option>
               ))}
             </select>
-          </Field>
+          </FormField>
         </div>
-      </Section>
+      </FormSection>
 
-      <Section
+      <FormSection
         message={messages.schedule}
         onSubmit={handleScheduleSave}
         saving={saving === 'schedule'}
@@ -485,24 +376,24 @@ export default function Settings() {
             </tbody>
           </table>
         </div>
-      </Section>
+      </FormSection>
 
-      <Section
+      <FormSection
         message={messages.nutrition}
         onSubmit={handleNutritionSave}
         saving={saving === 'nutrition'}
         title="Nutrition Target"
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <Field label="Week start" required>
+          <FormField label="Week start" required>
             <input
               className={inputClass}
               type="date"
               value={nutrition.weekStartDate}
               onChange={(event) => setNutrition({ ...nutrition, weekStartDate: event.target.value })}
             />
-          </Field>
-          <Field label="Calories/day" required>
+          </FormField>
+          <FormField label="Calories/day" required>
             <input
               className={inputClass}
               min="1"
@@ -510,8 +401,8 @@ export default function Settings() {
               value={nutrition.calories}
               onChange={(event) => setNutrition({ ...nutrition, calories: event.target.value })}
             />
-          </Field>
-          <Field label="Protein/day (g)" required>
+          </FormField>
+          <FormField label="Protein/day (g)" required>
             <input
               className={inputClass}
               min="0"
@@ -519,8 +410,8 @@ export default function Settings() {
               value={nutrition.proteinG}
               onChange={(event) => setNutrition({ ...nutrition, proteinG: event.target.value })}
             />
-          </Field>
-          <Field label="Carbs/day (g)">
+          </FormField>
+          <FormField label="Carbs/day (g)">
             <input
               className={inputClass}
               min="0"
@@ -528,8 +419,8 @@ export default function Settings() {
               value={nutrition.carbsG}
               onChange={(event) => setNutrition({ ...nutrition, carbsG: event.target.value })}
             />
-          </Field>
-          <Field label="Fat/day (g)">
+          </FormField>
+          <FormField label="Fat/day (g)">
             <input
               className={inputClass}
               min="0"
@@ -537,18 +428,18 @@ export default function Settings() {
               value={nutrition.fatG}
               onChange={(event) => setNutrition({ ...nutrition, fatG: event.target.value })}
             />
-          </Field>
+          </FormField>
         </div>
-      </Section>
+      </FormSection>
 
-      <Section
+      <FormSection
         message={messages.weight}
         onSubmit={handleWeightSave}
         saving={saving === 'weight'}
         title="Weight Entry"
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label={weightLabel}>
+          <FormField label={weightLabel}>
             <input
               className={inputClass}
               min="1"
@@ -557,17 +448,17 @@ export default function Settings() {
               value={weight.currentWeight}
               onChange={(event) => setWeight({ ...weight, currentWeight: event.target.value })}
             />
-          </Field>
-          <Field label="Date">
+          </FormField>
+          <FormField label="Date">
             <input
               className={inputClass}
               type="date"
               value={weight.date}
               onChange={(event) => setWeight({ ...weight, date: event.target.value })}
             />
-          </Field>
+          </FormField>
         </div>
-      </Section>
+      </FormSection>
     </div>
   )
 }
