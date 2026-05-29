@@ -380,6 +380,10 @@ function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, settings
   const upcomingLabel = runPlanStatus.upcomingPlannedRuns?.length
     ? runPlanStatus.upcomingPlannedRuns.map((run) => run.dayLabel).join(', ')
     : 'None'
+  const completedRuns = Number(runPlanStatus.completedRunsSoFar || 0)
+  const dueRuns = Number(runPlanStatus.plannedRunsDueSoFar || 0)
+  const upcomingRuns = runPlanStatus.upcomingPlannedRuns?.length || 0
+  const planProgressPercent = dueRuns ? Math.min(100, Math.round((completedRuns / dueRuns) * 100)) : 0
 
   return (
     <section className="space-y-4">
@@ -426,14 +430,46 @@ function TrainingLoadSection({ analysis, latestWeight, nutritionTarget, settings
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel>
-          <h3 className="text-base font-bold text-heading">Run Plan Status</h3>
-          <p className="mt-2 text-sm font-semibold text-muted">{runPlanStatus.message}</p>
-          <p className="mt-4 text-2xl font-bold text-heading">
-            {runPlanStatus.completedRunsSoFar} completed / {runPlanStatus.plannedRunsDueSoFar} due so far /{' '}
-            {runPlanStatus.upcomingPlannedRuns?.length || 0} upcoming
-          </p>
-          <p className="mt-2 text-xs font-bold uppercase tracking-normal text-muted">
-            {runPlanStatus.plannedRunsThisWeek} planned this week / Upcoming: {upcomingLabel}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">Plan pulse</p>
+              <h3 className="mt-1 text-xl font-bold text-heading">Run Plan Status</h3>
+            </div>
+            <span className="rounded border-2 border-border-strong bg-action px-3 py-1 text-sm font-bold text-action-text">
+              {planProgressPercent}% complete
+            </span>
+          </div>
+          <p className="mt-3 text-sm font-semibold text-muted">{runPlanStatus.message}</p>
+          <div className="mt-5">
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <p className="text-3xl font-bold leading-tight text-heading">
+                {completedRuns}<span className="text-base text-muted">/{dueRuns}</span>
+              </p>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">Completed due runs</p>
+            </div>
+            <div className="h-3 overflow-hidden rounded border border-border-panel bg-input">
+              <div
+                className="h-full rounded bg-control"
+                style={{ width: `${planProgressPercent}%` }}
+              />
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-3 border-t-2 border-border-panel pt-4 text-sm">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">This week</p>
+              <p className="mt-1 text-lg font-bold text-heading">{runPlanStatus.plannedRunsThisWeek}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">Due so far</p>
+              <p className="mt-1 text-lg font-bold text-heading">{dueRuns}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-normal text-muted">Upcoming</p>
+              <p className="mt-1 text-lg font-bold text-heading">{upcomingRuns}</p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs font-bold uppercase tracking-normal text-muted">
+            Upcoming: <span className="text-heading">{upcomingLabel}</span>
           </p>
         </Panel>
 
