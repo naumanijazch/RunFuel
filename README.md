@@ -61,6 +61,16 @@ npm run dev
 
 The frontend runs on `http://localhost:5173` by default.
 
+## App Screenshots
+
+![RunFuel login screen](frontend/public/screenshots/login.png)
+
+![RunFuel dashboard overview](frontend/public/screenshots/dashboard_1.png)
+
+![RunFuel planner overview](frontend/public/screenshots/planner_1.png)
+
+![RunFuel settings overview](frontend/public/screenshots/settings_1.png)
+
 ## Features
 
 ### Core App Foundation
@@ -77,6 +87,8 @@ The frontend runs on `http://localhost:5173` by default.
 - Auth-protected backend routes.
 - Protected frontend access for dashboard, settings, and planner pages.
 
+![Login and registration screen](frontend/public/screenshots/login.png)
+
 ### Settings
 
 - Goal selection: 5K, 10K, general endurance, or hybrid conditioning.
@@ -89,6 +101,10 @@ The frontend runs on `http://localhost:5173` by default.
 - Manual calorie target.
 - Optional macro targets.
 - Weight tracking.
+
+![Settings page goal, pace, and unit preferences](frontend/public/screenshots/settings_1.png)
+
+![Settings page gym schedule, nutrition targets, and weight tracking](frontend/public/screenshots/settings_2.png)
 
 ### Strava Integration
 
@@ -110,6 +126,12 @@ The frontend runs on `http://localhost:5173` by default.
 - Calorie and protein target.
 - Strava sync button.
 - Current plan summary.
+
+![Dashboard weekly summary and training decision](frontend/public/screenshots/dashboard_1.png)
+
+![Dashboard Strava runs and plan summary](frontend/public/screenshots/dashboard_2.png)
+
+![Dashboard secondary training details](frontend/public/screenshots/dashboard_3.png)
 
 ### Training Load and Fatigue Detector
 
@@ -142,6 +164,10 @@ The frontend runs on `http://localhost:5173` by default.
 - Adjusts the plan if fatigue or mileage spike is high.
 - Explains why each run was placed.
 - Saves the current week's generated plan.
+
+![Hybrid run planner generated week](frontend/public/screenshots/planner_1.png)
+
+![Hybrid run planner coach notes and warnings](frontend/public/screenshots/planner_2.png)
 
 ### Coach Notes
 
