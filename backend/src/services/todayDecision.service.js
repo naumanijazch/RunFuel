@@ -24,7 +24,7 @@ const TODAY_RELEVANT_CODES = new Set([
 
 function normalizeWorkoutType(workoutType) {
   const normalized = String(workoutType || 'rest').toLowerCase()
-  return ['run', 'easy_run', 'quality_run'].includes(normalized) ? 'run' : normalized
+  return normalized
 }
 
 function isPlannedRun(workoutType) {

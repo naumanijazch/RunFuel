@@ -19,11 +19,18 @@ export async function saveSettings(settings) {
 
 export async function fetchGymSchedule() {
   const response = await api.get('/gym-schedule')
-  return response.data.schedule
+  return normalizeSchedule(response.data.schedule)
+}
+
+function normalizeSchedule(schedule = []) {
+  return schedule.map((item) => ({
+    ...item,
+    workoutType: ['easy_run', 'quality_run'].includes(item.workoutType) ? 'run' : item.workoutType
+  }))
 }
 
 export async function saveGymSchedule(schedule) {
-  const response = await api.put('/gym-schedule', schedule)
+  const response = await api.put('/gym-schedule', normalizeSchedule(schedule))
   return response.data.schedule
 }
 
@@ -70,4 +77,14 @@ export async function syncStravaRuns() {
 export async function fetchTrainingLoadAnalysis() {
   const response = await api.get('/training-load/analysis')
   return response.data.analysis
+}
+
+export async function fetchCurrentRunPlan() {
+  const response = await api.get('/planner/current')
+  return response.data.plan
+}
+
+export async function generateRunPlan() {
+  const response = await api.post('/planner/generate')
+  return response.data.plan
 }

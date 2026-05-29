@@ -31,7 +31,7 @@ function normalizeWorkoutType(workoutType) {
 }
 
 function isRunWorkout(workoutType) {
-  return ['run', 'easy_run', 'quality_run'].includes(normalizeWorkoutType(workoutType))
+  return normalizeWorkoutType(workoutType) === 'run'
 }
 
 function isLegWorkout(workoutType) {
@@ -257,7 +257,7 @@ function buildWeeklyActivityMap({ gymSchedule = [], classifiedRuns = [] }) {
       hasActualRun,
       plannedRun,
       primaryActivityType,
-      inferredRunType: hardestRun?.runType || (plannedWorkoutType === 'quality_run' ? 'quality' : plannedRun ? 'easy' : null)
+      inferredRunType: hardestRun?.runType || scheduledDay.plannedRunType || (plannedRun ? 'easy' : null)
     }
   })
 }
@@ -265,8 +265,11 @@ function buildWeeklyActivityMap({ gymSchedule = [], classifiedRuns = [] }) {
 function getRunScore(runType) {
   return {
     easy: 2,
+    steady: 3,
     long: 4,
     tempo: 4,
+    intervals: 5,
+    hybrid_quality: 5,
     quality: 5,
     'quality-long': 6
   }[runType] || 0
@@ -374,7 +377,7 @@ function conflictKey(conflict) {
 }
 
 function isHardRunType(runType) {
-  return ['tempo', 'quality', 'quality-long'].includes(runType)
+  return ['tempo', 'intervals', 'hybrid_quality', 'quality', 'quality-long'].includes(runType)
 }
 
 function hasMileageSpike(weeklyRunStats) {
@@ -448,7 +451,7 @@ function detectScheduleConflicts(weeklyActivityMap, rollingFatigue, weeklyRunSta
     .forEach((score) => {
       const day = dayByNumber.get(score.dayOfWeek)
       const coincidesWithDemandingWork =
-        day && (['quality', 'quality-long'].includes(day.inferredRunType) || isLegWorkout(day.plannedWorkoutType))
+        day && (['tempo', 'intervals', 'hybrid_quality', 'quality', 'quality-long'].includes(day.inferredRunType) || isLegWorkout(day.plannedWorkoutType))
       conflicts.push({
         severity: coincidesWithDemandingWork ? 'high' : 'medium',
         code: 'HIGH_ROLLING_FATIGUE',
@@ -592,6 +595,14 @@ function getPlannedSchedule(gymSchedule, generatedPlan) {
     return generatedPlan.planJson.schedule
   }
 
+  if (Array.isArray(generatedPlan.planJson?.planDays)) {
+    return generatedPlan.planJson.planDays.map((day) => ({
+      dayOfWeek: day.dayOfWeek,
+      workoutType: day.plannedRun ? 'run' : day.scheduledWorkoutType,
+      plannedRunType: day.plannedRun?.runType || null
+    }))
+  }
+
   if (Array.isArray(generatedPlan.planJson)) {
     return generatedPlan.planJson
   }
@@ -615,7 +626,7 @@ function analyzeTrainingLoad({ userSettings = {}, gymSchedule = [], stravaRuns =
   })
   const rollingFatigue = calculateRollingFatigue(weeklyActivityMap)
   const hasTrueRestDay = weeklyActivityMap.some((day) => day.plannedWorkoutType === 'rest' && !day.hasActualRun)
-  const hasQualityRun = currentWeekClassifications.some((run) => ['quality', 'quality-long'].includes(run.runType))
+  const hasQualityRun = currentWeekClassifications.some((run) => ['tempo', 'intervals', 'hybrid_quality', 'quality', 'quality-long'].includes(run.runType))
   const hasHighRollingFatigue = rollingFatigue.scoresByDay.some((score) => score.classification === 'high')
   const conflicts = [
     ...detectMileageSpike(weeklyRunStats, {

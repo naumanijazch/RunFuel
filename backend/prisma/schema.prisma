@@ -39,8 +39,7 @@ enum WorkoutType {
   PUSH
   PULL
   LEGS
-  EASY_RUN
-  QUALITY_RUN
+  RUN
   REST
 }
 

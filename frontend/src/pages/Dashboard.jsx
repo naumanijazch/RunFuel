@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   API_BASE_URL,
+  fetchCurrentRunPlan,
   fetchCurrentNutritionTarget,
   fetchLatestWeight,
   fetchSettings,
@@ -49,6 +50,14 @@ function formatPace(secondsPerKm, settings = defaultSettings) {
   const seconds = displaySeconds % 60
   const label = settings.paceUnit === 'min_per_mile' ? '/mi' : '/km'
   return `${minutes}:${String(seconds).padStart(2, '0')} ${label}`
+}
+
+function formatPaceRange(range, settings = defaultSettings) {
+  if (!range) {
+    return null
+  }
+
+  return `${formatPace(range.from, settings)}-${formatPace(range.to, settings)}`
 }
 
 function formatWeight(weightKg, settings = defaultSettings) {
@@ -261,6 +270,62 @@ function WeightNutritionSummary({ weight, nutrition, settings }) {
   )
 }
 
+function getTodayDayOfWeek() {
+  return new Date().getDay() || 7
+}
+
+function findNextPlannedRun(plan) {
+  const todayDayOfWeek = getTodayDayOfWeek()
+  const upcoming = (plan?.planDays || []).find((day) => day.dayOfWeek >= todayDayOfWeek && day.plannedRun)
+
+  if (upcoming) {
+    return upcoming
+  }
+
+  return null
+}
+
+function PlannerSummaryCard({ plan, settings }) {
+  const nextRunDay = findNextPlannedRun(plan)
+  const nextRun = nextRunDay?.plannedRun
+
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-normal text-muted">This Week&apos;s Run Plan</p>
+          {plan ? (
+            <>
+              <h2 className="mt-1 text-2xl font-bold text-heading">
+                {plan.easyRunCount} easy · {plan.qualityRunCount} quality
+              </h2>
+              {nextRun ? (
+                <p className="mt-2 text-sm font-semibold text-muted">
+                  Next: {nextRunDay.label} {nextRun.title} - {formatDistance(nextRun.distanceKm, settings)}
+                  {nextRun.paceRangeSecPerKm ? ` @ ${formatPaceRange(nextRun.paceRangeSecPerKm, settings)}` : ''}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm font-semibold text-muted">No more planned runs this week.</p>
+              )}
+            </>
+          ) : (
+            <>
+              <h2 className="mt-1 text-2xl font-bold text-heading">No run plan generated yet</h2>
+              <p className="mt-2 text-sm font-semibold text-muted">Generate a weekly plan from your gym schedule and Strava history.</p>
+            </>
+          )}
+        </div>
+        <Link
+          className="rounded border-2 border-border-strong bg-action px-4 py-2 text-sm font-bold text-action-text hover:bg-action-hover"
+          to="/planner"
+        >
+          {plan ? 'View Planner' : 'Generate plan'}
+        </Link>
+      </div>
+    </Panel>
+  )
+}
+
 function severityClass(severity) {
   if (severity === 'high') {
     return 'border-danger bg-danger text-danger-text'
@@ -465,6 +530,7 @@ export default function Dashboard() {
   const [latestWeight, setLatestWeight] = useState(null)
   const [nutritionTarget, setNutritionTarget] = useState(null)
   const [trainingLoadAnalysis, setTrainingLoadAnalysis] = useState(null)
+  const [currentPlan, setCurrentPlan] = useState(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState(null)
@@ -480,13 +546,14 @@ export default function Dashboard() {
   const hasRuns = recentRuns.length > 0
 
   const loadDashboard = useCallback(async () => {
-    const [loadedStatus, loadedSummary, loadedWeight, loadedNutrition, loadedTrainingLoad, loadedSettings] = await Promise.all([
+    const [loadedStatus, loadedSummary, loadedWeight, loadedNutrition, loadedTrainingLoad, loadedSettings, loadedPlan] = await Promise.all([
       fetchStravaStatus(),
       fetchStravaSummary(),
       fetchLatestWeight(),
       fetchCurrentNutritionTarget(),
       fetchTrainingLoadAnalysis(),
-      fetchSettings()
+      fetchSettings(),
+      fetchCurrentRunPlan()
     ])
 
     setStatus(loadedStatus)
@@ -495,6 +562,7 @@ export default function Dashboard() {
     setNutritionTarget(loadedNutrition)
     setTrainingLoadAnalysis(loadedTrainingLoad)
     setSettings({ ...defaultSettings, ...(loadedSettings || {}) })
+    setCurrentPlan(loadedPlan)
 
     if (loadedStatus.connected) {
       const loadedRuns = await fetchStravaRuns()
@@ -618,6 +686,8 @@ export default function Dashboard() {
         settings={settings}
         summary={summary}
       />
+
+      <PlannerSummaryCard plan={currentPlan} settings={settings} />
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.55fr)]">
         <LatestRunCard run={summary.latestRun} settings={settings} />

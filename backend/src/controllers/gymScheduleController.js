@@ -7,14 +7,19 @@ const WORKOUT_TO_PRISMA = {
   legs: 'LEGS',
   upper: 'UPPER',
   full_body: 'FULL_BODY',
-  easy_run: 'EASY_RUN',
-  quality_run: 'QUALITY_RUN',
+  run: 'RUN',
   rest: 'REST'
 }
 
-const WORKOUT_TO_API = Object.fromEntries(
-  Object.entries(WORKOUT_TO_PRISMA).map(([key, value]) => [value, key])
-)
+const WORKOUT_TO_API = {
+  PUSH: 'push',
+  PULL: 'pull',
+  LEGS: 'legs',
+  UPPER: 'upper',
+  FULL_BODY: 'full_body',
+  RUN: 'run',
+  REST: 'rest'
+}
 
 const scheduleItemSchema = z.object({
   dayOfWeek: z.coerce.number().int().min(1).max(7),
@@ -24,8 +29,7 @@ const scheduleItemSchema = z.object({
     'legs',
     'upper',
     'full_body',
-    'easy_run',
-    'quality_run',
+    'run',
     'rest'
   ])
 })

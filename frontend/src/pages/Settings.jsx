@@ -26,8 +26,7 @@ const workoutOptions = [
   { value: 'legs', label: 'Legs' },
   { value: 'upper', label: 'Upper' },
   { value: 'full_body', label: 'Full body' },
-  { value: 'easy_run', label: 'Easy run' },
-  { value: 'quality_run', label: 'Quality/interval run' },
+  { value: 'run', label: 'Run' },
   { value: 'rest', label: 'Rest' }
 ]
 
@@ -48,7 +47,7 @@ const defaultSettings = {
 
 const defaultSchedule = days.map((day) => ({
   dayOfWeek: day.dayOfWeek,
-  workoutType: day.dayOfWeek === 7 ? 'rest' : 'easy_run'
+  workoutType: day.dayOfWeek === 7 ? 'rest' : 'run'
 }))
 
 function formatDateInput(date) {

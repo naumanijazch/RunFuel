@@ -20,16 +20,15 @@ const WORKOUT_TO_API = {
   LEGS: 'legs',
   UPPER: 'upper',
   FULL_BODY: 'full_body',
-  EASY_RUN: 'easy_run',
-  QUALITY_RUN: 'quality_run',
+  RUN: 'run',
   REST: 'rest'
 }
 
 const defaultSchedule = [
   { dayOfWeek: 1, workoutType: 'push' },
-  { dayOfWeek: 2, workoutType: 'easy_run' },
+  { dayOfWeek: 2, workoutType: 'run' },
   { dayOfWeek: 3, workoutType: 'pull' },
-  { dayOfWeek: 4, workoutType: 'quality_run' },
+  { dayOfWeek: 4, workoutType: 'run' },
   { dayOfWeek: 5, workoutType: 'legs' },
   { dayOfWeek: 6, workoutType: 'full_body' },
   { dayOfWeek: 7, workoutType: 'rest' }
